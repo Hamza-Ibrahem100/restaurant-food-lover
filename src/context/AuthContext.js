@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../firebase';
 
 const AuthContext = createContext();
 
@@ -7,10 +9,20 @@ export function AuthProvider({ children }) {
   const [popup, setPopup] = useState(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('foodLoverUser');
-    if (saved) {
-      setUser(JSON.parse(saved));
-    }
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser({
+          provider: firebaseUser.providerData[0]?.providerId || 'email',
+          email: firebaseUser.email,
+          firstName: firebaseUser.displayName?.split(' ')[0] || 'User',
+          lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || '',
+          uid: firebaseUser.uid
+        });
+      } else {
+        setUser(null);
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
   const showPopup = (message, isSuccess = true) => {
@@ -25,14 +37,11 @@ export function AuthProvider({ children }) {
       firstName: userData.firstName || 'User',
       lastName: userData.lastName || 'Name'
     };
-    localStorage.setItem('foodLoverUser', JSON.stringify(data));
     setUser(data);
     return data;
   };
 
   const logout = () => {
-    localStorage.removeItem('foodLoverUser');
-    localStorage.removeItem('rememberMe');
     setUser(null);
     showPopup('Signed out successfully.', true);
     setTimeout(() => {

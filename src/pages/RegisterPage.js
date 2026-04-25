@@ -4,6 +4,8 @@ import Nav from '../components/Nav';
 import Footer from '../components/Footer';
 import AuthPopup from '../components/AuthPopup';
 import { useAuth } from '../context/AuthContext';
+import { createUserWithEmailAndPassword, signInWithPopup, updateProfile } from 'firebase/auth';
+import { auth, googleProvider, facebookProvider } from '../firebase';
 
 function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -18,8 +20,9 @@ function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { saveUser, showPopup } = useAuth();
+  const { showPopup } = useAuth();
 
   const validateField = (name, value) => {
     switch (name) {
@@ -46,10 +49,10 @@ function RegisterPage() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
-    setErrors(prev => ({ ...prev, [name]: null }));
+    setErrors(prev => ({ ...prev, [name]: null, general: null }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const newErrors = {};
     
@@ -61,7 +64,7 @@ function RegisterPage() {
     });
 
     if (!formData.terms) {
-      alert('You must agree to the Terms of Service');
+      setErrors({ terms: 'You must agree to the Terms of Service' });
       return;
     }
 
@@ -70,25 +73,45 @@ function RegisterPage() {
       return;
     }
 
-    saveUser('Email', {
-      email: formData.email,
-      firstName: formData.firstName,
-      lastName: formData.lastName
-    });
-    showPopup('Welcome! Account created successfully.');
-    setTimeout(() => navigate('/'), 1500);
+    setLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      await updateProfile(userCredential.user, {
+        displayName: `${formData.firstName} ${formData.lastName}`
+      });
+      showPopup('Welcome! Account created successfully.');
+      setTimeout(() => navigate('/'), 1500);
+    } catch (error) {
+      setErrors({ general: error.message || 'Failed to create account' });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleGoogleSignUp = () => {
-    saveUser('Google');
-    showPopup('Welcome! Registered with Google.');
-    setTimeout(() => navigate('/'), 1500);
+  const handleGoogleSignUp = async () => {
+    setLoading(true);
+    try {
+      await signInWithPopup(auth, googleProvider);
+      showPopup('Welcome! Registered with Google.');
+      setTimeout(() => navigate('/'), 1500);
+    } catch (error) {
+      setErrors({ general: error.message || 'Failed to sign up with Google' });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleFacebookSignUp = () => {
-    saveUser('Facebook');
-    showPopup('Welcome! Registered with Facebook.');
-    setTimeout(() => navigate('/'), 1500);
+  const handleFacebookSignUp = async () => {
+    setLoading(true);
+    try {
+      await signInWithPopup(auth, facebookProvider);
+      showPopup('Welcome! Registered with Facebook.');
+      setTimeout(() => navigate('/'), 1500);
+    } catch (error) {
+      setErrors({ general: error.message || 'Failed to sign up with Facebook' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -111,6 +134,8 @@ function RegisterPage() {
             <form className="register-form" onSubmit={handleSubmit}>
               <h3>Sign Up</h3>
               <p className="form-desc">Fill in your details to create an account</p>
+              
+              {errors.general && <div className="field-error" style={{ textAlign: 'center', marginBottom: '15px' }}>{errors.general}</div>}
               
               <div className="form-row">
                 <div className="form-group">
@@ -237,12 +262,14 @@ function RegisterPage() {
                 <label htmlFor="terms">I agree to the <Link to="#">Terms of Service</Link> and <Link to="#">Privacy Policy</Link></label>
               </div>
               
-              <button type="submit" className="form-submit">Create Account</button>
+              <button type="submit" className="form-submit" disabled={loading}>
+                {loading ? 'Creating account...' : 'Create Account'}
+              </button>
               
               <div className="form-divider">or continue with</div>
               
               <div className="social-register">
-                <button type="button" className="social-btn" onClick={handleGoogleSignUp}>
+                <button type="button" className="social-btn" onClick={handleGoogleSignUp} disabled={loading}>
                   <svg width="18" height="18" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -251,7 +278,7 @@ function RegisterPage() {
                   </svg>
                   Google
                 </button>
-                <button type="button" className="social-btn" onClick={handleFacebookSignUp}>
+                <button type="button" className="social-btn" onClick={handleFacebookSignUp} disabled={loading}>
                   <svg width="18" height="18" viewBox="0 0 24 24">
                     <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                   </svg>
