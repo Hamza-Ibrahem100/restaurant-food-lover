@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { signOut } from 'firebase/auth';
+import { signOut, deleteUser } from 'firebase/auth';
 import { auth } from '../firebase';
 
 function Nav() {
@@ -37,14 +37,21 @@ function Nav() {
   };
 
   const handleLogout = async () => {
+    if (!user) return;
+    
     try {
+      const userAuth = auth.currentUser;
       await signOut(auth);
-      showPopup('Signed out successfully.', true);
+      if (userAuth) {
+        await deleteUser(userAuth);
+      }
+      showPopup('Account deleted successfully.', true);
       setTimeout(() => {
         window.location.href = '/';
       }, 1000);
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Delete account error:', error);
+      showPopup('Failed to delete account.', false);
     }
   };
 
