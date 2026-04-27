@@ -3,10 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { signOut, deleteUser } from 'firebase/auth';
 import { auth } from '../firebase';
+import LogoutModal from './LogoutModal';
 
 function Nav() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { user, showPopup } = useAuth();
   const navigate = useNavigate();
 
@@ -37,6 +39,10 @@ function Nav() {
   };
 
   const handleLogout = async () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = async () => {
     if (!user) return;
     
     try {
@@ -47,12 +53,16 @@ function Nav() {
       }
       showPopup('Account deleted successfully.', true);
       setTimeout(() => {
-        window.location.href = '/';
+        window.location.href = '/login';
       }, 1000);
     } catch (error) {
       console.error('Delete account error:', error);
       showPopup('Failed to delete account.', false);
     }
+  };
+
+  const cancelLogout = () => {
+    setShowLogoutModal(false);
   };
 
   const navLinks = [
@@ -81,7 +91,9 @@ function Nav() {
                 </button>
               </li>
             ))}
-            {user ? (
+            {user?.email === 'hamzaelsharkh@gmail.com' ? (
+              <li><Link to="/admin">Dashboard</Link></li>
+            ) : user ? (
               <li className="user-menu">
                 <span className="user-name">{user.firstName || 'User'}</span>
                 <button onClick={handleLogout}>Logout</button>
@@ -103,26 +115,34 @@ function Nav() {
 
       <div className={`mobile-menu ${isOpen ? 'active' : ''}`}>
         <ul>
-          {navLinks.map(link => (
-            <li key={link.id}>
-              <button 
-                onClick={() => scrollToSection(link.id)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Playfair Display', serif", fontSize: '32px', color: 'var(--text-primary)' }}
-              >
-                {link.label}
-              </button>
-            </li>
-          ))}
-          {user ? (
-            <li className="user-menu">
-              <span className="user-name">{user.firstName || 'User'}</span>
-              <button onClick={handleLogout}>Logout</button>
-            </li>
-          ) : (
-            <li><Link to="/login" onClick={() => setIsOpen(false)}>Login</Link></li>
-          )}
-        </ul>
-      </div>
+{navLinks.map(link => (
+              <li key={link.id}>
+                <button 
+                  onClick={() => scrollToSection(link.id)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Playfair Display', serif", fontSize: '32px', color: 'var(--text-primary)' }}
+                >
+                  {link.label}
+                </button>
+              </li>
+            ))}
+            {user?.email === 'hamzaelsharkh@gmail.com' ? (
+              <li><Link to="/admin" onClick={() => setIsOpen(false)}>Dashboard</Link></li>
+            ) : user ? (
+              <li className="user-menu">
+                <span className="user-name">{user.firstName || 'User'}</span>
+                <button onClick={handleLogout}>Logout</button>
+              </li>
+            ) : (
+              <li><Link to="/login" onClick={() => setIsOpen(false)}>Login</Link></li>
+            )}
+          </ul>
+        </div>
+
+      <LogoutModal 
+        isOpen={showLogoutModal} 
+        onConfirm={confirmLogout} 
+        onCancel={cancelLogout} 
+      />
     </>
   );
 }

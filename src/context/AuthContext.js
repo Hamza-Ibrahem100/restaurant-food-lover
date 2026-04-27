@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
 
+const ADMIN_EMAIL = 'hamzaelsharkh@gmail.com';
+
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
@@ -11,12 +13,14 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
+        const email = firebaseUser.email;
         setUser({
           provider: firebaseUser.providerData[0]?.providerId || 'email',
-          email: firebaseUser.email,
+          email: email,
           firstName: firebaseUser.displayName?.split(' ')[0] || 'User',
           lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || '',
-          uid: firebaseUser.uid
+          uid: firebaseUser.uid,
+          isAdmin: email?.toLowerCase().includes(ADMIN_EMAIL.toLowerCase()) || false
         });
       } else {
         setUser(null);

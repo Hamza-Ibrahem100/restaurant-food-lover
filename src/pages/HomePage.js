@@ -1,13 +1,16 @@
 import React, { useEffect, useRef } from 'react';
 import Nav from '../components/Nav';
 import Footer from '../components/Footer';
-import AuthPopup from '../components/AuthPopup';
+import { useAuth } from '../context/AuthContext';
+import { db } from '../firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 function HomePage() {
   const menuCardsRef = useRef([]);
   const galleryItemsRef = useRef([]);
   const specialsRef = useRef([]);
   const ordersRef = useRef([]);
+  const { user } = useAuth();
 
   useEffect(() => {
     const observerOptions = { threshold: 0.1 };
@@ -66,22 +69,42 @@ function HomePage() {
     document.getElementById('menu')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleReservation = (e) => {
+  const handleReservation = async (e) => {
     e.preventDefault();
-    const btn = e.target.querySelector('.form-submit');
-    btn.textContent = 'Reservation Requested!';
-    btn.style.background = '#4CAF50';
-    setTimeout(() => {
-      btn.textContent = 'Request Reservation';
-      btn.style.background = '';
-      e.target.reset();
-    }, 3000);
+    const form = e.target;
+    const btn = form.querySelector('.form-submit');
+    btn.textContent = 'Saving...';
+    
+    const reservationData = {
+      name: form.name.value,
+      email: form.email.value,
+      phone: form.phone.value,
+      party: form.party.value,
+      date: form.date.value,
+      time: form.time.value,
+      requests: form.requests.value,
+      status: 'pending',
+      createdAt: serverTimestamp()
+    };
+    
+    try {
+      await addDoc(collection(db, 'reservations'), reservationData);
+      btn.textContent = 'Reservation Requested!';
+      btn.style.background = '#4CAF50';
+      setTimeout(() => {
+        btn.textContent = 'Request Reservation';
+        btn.style.background = '';
+        form.reset();
+      }, 3000);
+    } catch (error) {
+      console.error('Error:', error);
+      btn.textContent = 'Error! Try again';
+    }
   };
 
   return (
     <>
       <Nav />
-      <AuthPopup />
       
       <section className="hero animated">
         <div className="hero-bg"></div>
@@ -374,11 +397,11 @@ function HomePage() {
           <form className="reservation-form fade-in" onSubmit={handleReservation}>
             <div className="form-row">
               <div className="form-group">
-                <input type="text" id="name" required placeholder=" " />
+                <input type="text" id="name" required placeholder=" " defaultValue={user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : ''} />
                 <label htmlFor="name">Your Name</label>
               </div>
               <div className="form-group">
-                <input type="email" id="email" required placeholder=" " />
+                <input type="email" id="email" required placeholder=" " defaultValue={user?.email || ''} readOnly={!!user} />
                 <label htmlFor="email">Email Address</label>
               </div>
             </div>

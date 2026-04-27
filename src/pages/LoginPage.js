@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Nav from '../components/Nav';
 import Footer from '../components/Footer';
-import AuthPopup from '../components/AuthPopup';
 import { useAuth } from '../context/AuthContext';
 import { signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
 import { auth, googleProvider, facebookProvider } from '../firebase';
@@ -97,7 +96,6 @@ function LoginPage() {
   return (
     <>
       <Nav />
-      <AuthPopup />
       
       <section className="hero static" style={{ minHeight: '50vh' }}>
         <div className="hero-bg"></div>
